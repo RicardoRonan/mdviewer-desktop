@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=MDViewer
+GenericName=Markdown Reader
+Comment=Offline Markdown reader with block-anchored annotations
+Exec=MDViewer %f
+TryExec=MDViewer
+Icon=mdviewer
+Terminal=false
+Categories=Office;TextTools;Viewer;
+MimeType=text/markdown;text/x-markdown;
+Keywords=markdown;md;reader;notes;annotations;
+StartupWMClass=MDViewer
