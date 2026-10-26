@@ -83,7 +83,9 @@ class DocumentRepositoryTest {
 
             val renamedPath = fixture.documents.renameFile(opened.document.uri, "final.md")
 
-            assertEquals(File(fixture.notes, "final.md").absolutePath, renamedPath)
+            // Compare canonical paths: on some Windows runners java.io.tmpdir resolves via an
+            // 8.3 short name (e.g. RUNNER~1), while production always canonicalizes URIs.
+            assertEquals(File(fixture.notes, "final.md").canonicalPath, File(renamedPath).canonicalPath)
             assertFalse(file.exists())
             assertEquals("a1", fixture.annotations.observeForDocument(renamedPath).first().single().id)
             assertEquals("final.md", fixture.documents.observeRecents().first().single().name)
