@@ -142,7 +142,7 @@ jobs:
           generate_release_notes: true
           files: dist/*
           body: |
-            Offline Markdown reader with portable, block-anchored annotations.
+            MDViewer is an offline Markdown reader for Linux and Windows.
 
             ## Downloads
             | Platform | File |
@@ -151,6 +151,6 @@ jobs:
             | Linux (AppImage) | `MDViewer-${{ needs.version.outputs.version }}-x86_64.AppImage` |
             | Linux (Debian/Ubuntu) | the `.deb` package |
 
-            **Windows:** run the installer, then open any `.md` file. The first launch shows a
-            SmartScreen warning because the build is unsigned — click **More info → Run anyway**.
+            **Windows:** Run the installer, then open any `.md` file. The first launch shows a
+            SmartScreen warning because the build is not signed. Click **More info → Run anyway**.
             **Linux AppImage:** `chmod +x MDViewer-*.AppImage && ./MDViewer-*.AppImage`

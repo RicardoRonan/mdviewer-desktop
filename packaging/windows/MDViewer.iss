@@ -1,4 +1,4 @@
-; MDViewer Windows install wizard — Inno Setup 6 script.
+; MDViewer Windows install wizard: Inno Setup 6 script.
 ; Wraps the jpackage app-image (produced by `gradlew createDistributable`) into a
 ; proper Windows installer with Start Menu / Desktop shortcuts and markdown file
 ; associations. Build via packaging\build-windows.bat.

@@ -1,12 +1,12 @@
 # MDViewer Desktop
 
-An offline Markdown reader with portable, block-anchored annotations, for **Linux and Windows**.
-It reuses the Android app's parser, anchoring engine, and reader design, and runs as a native Compose
-Desktop application.
+MDViewer is an offline Markdown reader for **Linux and Windows**. Your highlights and notes stay
+portable. They stay attached to the right spot in the text, even after you edit the file. The app
+shares the Android app's parser and reader design. It runs as a native desktop app.
 
 ## Download
 
-Grab a prebuilt package from the latest release:
+Download a ready-made package from the latest release:
 
 | Platform | File |
 | --- | --- |
@@ -14,39 +14,40 @@ Grab a prebuilt package from the latest release:
 | Linux (AppImage) | [`MDViewer-<version>-x86_64.AppImage`](https://github.com/RicardoRonan/mdviewer-desktop/releases/latest) |
 | Linux (Debian/Ubuntu) | the `.deb` asset on the same page |
 
-- **Windows:** run the installer, choose Start Menu / Desktop shortcuts, and opt in to opening
-  `.md` / `.mdown` / `.markdown` files with MDViewer. Uninstall from *Add or remove programs*.
+- **Windows:** Run the installer. Pick your Start Menu and Desktop shortcuts. Choose to open
+  `.md`, `.mdown`, and `.markdown` files with MDViewer. To uninstall, go to *Add or remove programs*.
 - **Linux AppImage:** `chmod +x MDViewer-*.AppImage && ./MDViewer-*.AppImage` (add
   `APPIMAGE_EXTRACT_AND_RUN=1` on systems without FUSE).
 
-> **Windows SmartScreen:** the installer is not code-signed, so the first run shows
-> *"Windows protected your PC"*. This is a normal warning for unsigned apps, not a virus.
-> Click **More info → Run anyway** to install. (Signing would remove this — see
-> [Code signing](#code-signing).)
+> **Windows SmartScreen:** The installer is not signed, so the first run shows
+> *"Windows protected your PC"*. This warning is normal for unsigned apps. It does not mean the
+> file has a virus. Click **More info → Run anyway** to install. Signing the app would remove
+> this. See [Code signing](#code-signing).
 
-Releases are published automatically by CI whenever a version tag (`v*`) is pushed, so the
-`releases/latest` page always links to current installers.
+CI publishes a release every time you push a version tag (`v*`). The `releases/latest` page always
+links to the newest installers.
 
 ## Features
 
-- **Library folder browsing**: pick a folder, browse nested directories, jump back into recents.
-- **Reader**: headings, paragraphs, quotes, lists and task lists, fenced code, GFM tables, images,
+- **Library folder browsing**: pick a folder, browse nested directories, and jump back into recents.
+- **Reader**: headings, paragraphs, quotes, lists, task lists, fenced code, GFM tables, images,
   horizontal rules, and clickable links.
-- **Annotations**: select text to highlight it in one of seven colors, or attach a note with tags.
-  Highlights survive later edits thanks to exact/prefix/suffix anchoring, and unresolved ones are
-  reported as orphaned instead of silently disappearing.
-- **Notebook**: every highlight and note across the library, filterable and linked back to its file.
-- **Editor**: markdown formatting chips, save and preview.
-- **Export and import**: JSON sidecar (`mdviewer.annotations/1`) plus a human-readable Markdown
-  digest. Imports merge by id, newest wins, and deletions stay deleted.
-- **Settings**: system/light/dark theme, four text sizes, optional remote images, max line width.
-- **Local-first**: no accounts, no network calls unless you enable remote images.
+- **Annotations**: select text to highlight it in one of seven colors. Or attach a note with tags.
+  Highlights survive later edits. Exact, prefix, and suffix anchoring makes that work. If a
+  highlight can no longer be found, the app flags it as orphaned. It never vanishes on its own.
+- **Notebook**: every highlight and note in the library. Filter them and jump back to the file.
+- **Editor**: markdown formatting chips, save, and preview.
+- **Export and import**: a JSON sidecar (`mdviewer.annotations/1`) plus a readable Markdown digest.
+  Imports merge by id. The newest copy wins. Deleted highlights stay deleted.
+- **Settings**: system, light, or dark theme. Four text sizes. Optional remote images. Max line
+  width.
+- **Local-first**: no accounts. No network calls unless you enable remote images.
 
 ## Requirements
 
 - Windows 10/11 (x64) or Linux x86_64, with a desktop session
 - JDK 17+ (only needed to build; the installers and AppImage ship their own runtime)
-- Inno Setup 6 (only needed to build the Windows installer — `winget install JRSoftware.InnoSetup`)
+- Inno Setup 6 (only needed to build the Windows installer: `winget install JRSoftware.InnoSetup`)
 
 ## Run from source
 
@@ -55,7 +56,7 @@ export JAVA_HOME=/path/to/jdk-17   # Windows: set JAVA_HOME=C:\path\to\jdk-17
 ./gradlew run --args="$HOME/Documents/notes.md"   # Windows: .\gradlew.bat run --args="C:\path\to\notes.md"
 ```
 
-Omit `--args` to start at the library screen.
+Leave off `--args` to start at the library screen.
 
 ## Tests
 
@@ -63,9 +64,10 @@ Omit `--args` to start at the library screen.
 ./gradlew test
 ```
 
-42 tests cover the Markdown parser, annotation anchoring, JSON storage, repositories, sidecar
-transfer, formatting helpers, Compose UI flows (library and reader), and an off-screen Skia render
-check (`build/reports/ui/markdown-render.png`).
+42 tests cover the main parts of the app: the Markdown parser, annotation anchoring, JSON storage,
+repositories, sidecar transfer, and formatting helpers. They also cover the Compose UI flows for
+the library and reader. An off-screen Skia render check writes
+`build/reports/ui/markdown-render.png`.
 
 ## Build a Linux AppImage
 
@@ -74,8 +76,8 @@ export JAVA_HOME=/path/to/jdk-17
 ./packaging/build-appimage.sh
 ```
 
-The script builds the jpackage runtime image, assembles an AppDir with a desktop entry and icon,
-and produces:
+The script builds the runtime image. It assembles an AppDir with a desktop entry and icon. It
+then produces:
 
 ```text
 release/MDViewer-1.0.0-x86_64.AppImage
@@ -88,9 +90,9 @@ chmod +x release/MDViewer-1.0.0-x86_64.AppImage
 ./release/MDViewer-1.0.0-x86_64.AppImage ~/Documents/notes.md
 ```
 
-On systems without FUSE, prefix with `APPIMAGE_EXTRACT_AND_RUN=1`.
+On systems without FUSE, prefix the command with `APPIMAGE_EXTRACT_AND_RUN=1`.
 
-To register it with your application menu, place the AppImage somewhere stable and add a desktop
+To add it to your application menu, move the AppImage to a fixed location. Then add a desktop
 entry:
 
 ```bash
@@ -111,11 +113,11 @@ EOF
 update-desktop-database ~/.local/share/applications 2>/dev/null || true
 ```
 
-A Debian package can also be produced with `./gradlew packageDeb`.
+You can also build a Debian package with `./gradlew packageDeb`.
 
 ## Build a Windows installer
 
-On Windows with a JDK 17+ and [Inno Setup 6](https://jrsoftware.org/isinfo.php) installed:
+On Windows, you need a JDK 17+ and [Inno Setup 6](https://jrsoftware.org/isinfo.php):
 
 ```powershell
 # one-time: install the Inno Setup compiler
@@ -131,28 +133,29 @@ The script produces:
 release\MDViewer-1.0.0-Setup.exe
 ```
 
-Run it to install MDViewer for the current user, add Start Menu / Desktop shortcuts, and (optionally)
-register `.md` / `.mdown` / `.markdown` file associations so double-clicking a Markdown file opens
-MDViewer. Under the hood it runs `gradlew createDistributable` then compiles
+Run it to install MDViewer for the current user. It adds Start Menu and Desktop shortcuts. It can
+also register `.md`, `.mdown`, and `.markdown` files, so double-clicking a Markdown file opens
+MDViewer. The script runs `gradlew createDistributable`. It then compiles
 `packaging/windows/MDViewer.iss` with Inno Setup.
 
 ## Code signing
 
-Release builds are **not code-signed**, so Windows SmartScreen shows *"Windows protected your PC"*
-on first run. It's a reputation check on unsigned downloads, not a malware flag — the bypass is
-**More info → Run anyway**.
+Release builds are **not signed**. So Windows SmartScreen shows *"Windows protected your PC"* on
+first run. SmartScreen checks the reputation of downloads. It is not a malware scan. To bypass it,
+click **More info → Run anyway**.
 
-To remove the warning permanently, sign the installer with a certificate:
+To remove the warning for good, sign the installer with a certificate:
 
-- **Azure Trusted Signing** (~$9.99/mo) — Microsoft's service, quickest path to a signed build with
-  fast SmartScreen reputation.
-- **OV cert** (SSL.com, Sectigo, DigiCert) — ~$70–200/yr; clears "Unknown publisher" but may warn
-  briefly until reputation builds.
-- **EV cert** — ~$300–500/yr; historically grants reputation immediately.
+- **Azure Trusted Signing** (about $9.99/month). This is Microsoft's service. It is the quickest
+  path to a signed build with fast SmartScreen reputation.
+- **OV cert** (SSL.com, Sectigo, DigiCert). About $70 to 200 a year. It clears "Unknown publisher".
+  You may still see a warning until the app builds reputation.
+- **EV cert**. About $300 to 500 a year. It has a history of granting reputation right away.
 
-Modern signing uses a cloud key-holding service (Azure Trusted Signing, SSL.com eSigner, DigiCert
-KeyLocker) rather than a local `.pfx`, so CI signs via their API. Once you have credentials, wire a
-signing step into `.github/workflows/release.yml` before the `softprops/action-gh-release` step.
+Today, signing uses a cloud key service. Options include Azure Trusted Signing, SSL.com eSigner,
+and DigiCert KeyLocker. Your private key stays with them, not in a local `.pfx` file. CI signs
+through their API. Once you have credentials, add a signing step to `.github/workflows/release.yml`.
+Put it before the `softprops/action-gh-release` step.
 
 ## Where your data lives
 
@@ -161,8 +164,8 @@ signing step into `.github/workflows/release.yml` before the `softprops/action-g
 | Linux | `~/.config/mdviewer/settings.json` | `~/.local/share/mdviewer/library.json` |
 | Windows | `%APPDATA%\mdviewer\settings.json` | `%LOCALAPPDATA%\mdviewer\library.json` |
 
-Linux paths honour `XDG_CONFIG_HOME` and `XDG_DATA_HOME`. Uninstalling the Windows app leaves these
-files in place so your library and highlights are never deleted with the program.
+Linux paths respect `XDG_CONFIG_HOME` and `XDG_DATA_HOME`. Uninstalling the Windows app leaves
+these files alone. Your library and highlights are never deleted with the program.
 
 ## Project layout
 
@@ -179,18 +182,18 @@ src/main/kotlin/dev/ricardo/mdviewer/
 
 ## Desktop port notes
 
-- Room is replaced by a JSON file store. The data volume is small and this keeps the packaged app
-  free of native SQLite artifacts.
-- DataStore settings are replaced by a JSON file behind the same `Flow<UserSettings>` surface.
-- Storage Access Framework code is replaced by a library folder plus native file dialogs.
+- Room is replaced by a JSON file store. The data volume is small. This keeps the packaged app
+  free of native SQLite files.
+- DataStore settings are replaced by a JSON file. It keeps the same `Flow<UserSettings>` interface.
+- Storage Access Framework code is replaced by a library folder and native file dialogs.
 - Share intents are replaced by save dialogs for JSON and digest exports.
-- Reading position is saved after the scroll settles instead of on activity pause.
+- Reading position is saved when the scroll settles, not on activity pause.
 
 ## Known gaps
 
 - Remote images stay hidden until you enable **Load remote images** in settings.
 - No drag and drop, tabs, or multi-window yet.
-- The library index is flat (one root folder); change it from the library screen.
+- The library index is flat (one root folder). Change it from the library screen.
 
 ## License
 
