@@ -117,8 +117,12 @@ private fun walk(
             walk(root, child, depth + 1, visited, found)
         } else if (runCatching { child.isFile }.getOrDefault(false) && isMarkdownName(child.name)) {
             val file = runCatching { child.canonicalFile }.getOrDefault(child)
+            // The logical folder path is always '/'-separated regardless of OS, because
+            // folderPage and the library UI split on '/'. Filesystem paths (openUri) keep
+            // native separators.
             val relative = file.parentFile?.path
                 ?.removePrefix(root.path)
+                ?.replace('\\', '/')
                 ?.trim('/')
                 .orEmpty()
             found.putIfAbsent(

@@ -48,7 +48,7 @@ compose.desktop {
         mainClass = "dev.ricardo.mdviewer.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Deb)
+            targetFormats(TargetFormat.Deb, TargetFormat.Exe)
             packageName = "MDViewer"
             packageVersion = "1.0.0"
             description = "Offline Markdown reader with block-anchored annotations"
@@ -60,6 +60,16 @@ compose.desktop {
                 menuGroup = "Office"
                 appCategory = "Office"
                 debMaintainer = "Ricardo"
+            }
+
+            windows {
+                iconFile.set(project.file("packaging/icon.ico"))
+                menuGroup = "Office"
+                shortcut = true
+                perUserInstall = true
+                // Markdown file associations are registered by the Inno Setup wizard
+                // (packaging/windows/MDViewer.iss), not by jpackage, because Compose 1.9.0
+                // marks `fileAssociations` internal on the Windows platform settings.
             }
         }
     }

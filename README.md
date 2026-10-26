@@ -1,8 +1,26 @@
 # MDViewer Desktop
 
-The Linux desktop version of MDViewer, an offline Markdown reader with portable, block-anchored
-annotations. It reuses the Android app's parser, anchoring engine, and reader design, and runs as a
-native Compose Desktop application.
+An offline Markdown reader with portable, block-anchored annotations, for **Linux and Windows**.
+It reuses the Android app's parser, anchoring engine, and reader design, and runs as a native Compose
+Desktop application.
+
+## Download
+
+Grab a prebuilt package from the latest release:
+
+| Platform | File |
+| --- | --- |
+| Windows 10/11 (x64) | [`MDViewer-<version>-Setup.exe`](https://github.com/RicardoRonan/mdviewer-desktop/releases/latest) |
+| Linux (AppImage) | [`MDViewer-<version>-x86_64.AppImage`](https://github.com/RicardoRonan/mdviewer-desktop/releases/latest) |
+| Linux (Debian/Ubuntu) | the `.deb` asset on the same page |
+
+- **Windows:** run the installer, choose Start Menu / Desktop shortcuts, and opt in to opening
+  `.md` / `.mdown` / `.markdown` files with MDViewer. Uninstall from *Add or remove programs*.
+- **Linux AppImage:** `chmod +x MDViewer-*.AppImage && ./MDViewer-*.AppImage` (add
+  `APPIMAGE_EXTRACT_AND_RUN=1` on systems without FUSE).
+
+Releases are published automatically by CI whenever a version tag (`v*`) is pushed, so the
+`releases/latest` page always links to current installers.
 
 ## Features
 
@@ -21,14 +39,15 @@ native Compose Desktop application.
 
 ## Requirements
 
-- Linux x86_64 with a desktop session
-- JDK 17 (only needed to build; the AppImage ships its own runtime)
+- Windows 10/11 (x64) or Linux x86_64, with a desktop session
+- JDK 17+ (only needed to build; the installers and AppImage ship their own runtime)
+- Inno Setup 6 (only needed to build the Windows installer — `winget install JRSoftware.InnoSetup`)
 
 ## Run from source
 
 ```bash
-export JAVA_HOME=/path/to/jdk-17
-./gradlew run --args="$HOME/Documents/notes.md"
+export JAVA_HOME=/path/to/jdk-17   # Windows: set JAVA_HOME=C:\path\to\jdk-17
+./gradlew run --args="$HOME/Documents/notes.md"   # Windows: .\gradlew.bat run --args="C:\path\to\notes.md"
 ```
 
 Omit `--args` to start at the library screen.
@@ -89,14 +108,38 @@ update-desktop-database ~/.local/share/applications 2>/dev/null || true
 
 A Debian package can also be produced with `./gradlew packageDeb`.
 
+## Build a Windows installer
+
+On Windows with a JDK 17+ and [Inno Setup 6](https://jrsoftware.org/isinfo.php) installed:
+
+```powershell
+# one-time: install the Inno Setup compiler
+winget install JRSoftware.InnoSetup
+
+# build the jpackage app-image, draw icon.ico if missing, and compile the wizard
+.\packaging\build-windows.bat
+```
+
+The script produces:
+
+```text
+release\MDViewer-1.0.0-Setup.exe
+```
+
+Run it to install MDViewer for the current user, add Start Menu / Desktop shortcuts, and (optionally)
+register `.md` / `.mdown` / `.markdown` file associations so double-clicking a Markdown file opens
+MDViewer. Under the hood it runs `gradlew createDistributable` then compiles
+`packaging/windows/MDViewer.iss` with Inno Setup.
+
 ## Where your data lives
 
-| Path | Contents |
-| --- | --- |
-| `~/.config/mdviewer/settings.json` | Theme, text size, image preference, library folder |
-| `~/.local/share/mdviewer/library.json` | Document index, reading positions, annotations |
+| Platform | Settings | Library / annotations |
+| --- | --- | --- |
+| Linux | `~/.config/mdviewer/settings.json` | `~/.local/share/mdviewer/library.json` |
+| Windows | `%APPDATA%\mdviewer\settings.json` | `%LOCALAPPDATA%\mdviewer\library.json` |
 
-Both honour `XDG_CONFIG_HOME` and `XDG_DATA_HOME`.
+Linux paths honour `XDG_CONFIG_HOME` and `XDG_DATA_HOME`. Uninstalling the Windows app leaves these
+files in place so your library and highlights are never deleted with the program.
 
 ## Project layout
 
