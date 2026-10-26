@@ -151,5 +151,6 @@ jobs:
             | Linux (AppImage) | `MDViewer-${{ needs.version.outputs.version }}-x86_64.AppImage` |
             | Linux (Debian/Ubuntu) | the `.deb` package |
 
-            **Windows:** run the installer, then open any `.md` file. To build from source, see the README.
+            **Windows:** run the installer, then open any `.md` file. The first launch shows a
+            SmartScreen warning because the build is unsigned — click **More info → Run anyway**.
             **Linux AppImage:** `chmod +x MDViewer-*.AppImage && ./MDViewer-*.AppImage`

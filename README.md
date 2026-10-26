@@ -19,6 +19,11 @@ Grab a prebuilt package from the latest release:
 - **Linux AppImage:** `chmod +x MDViewer-*.AppImage && ./MDViewer-*.AppImage` (add
   `APPIMAGE_EXTRACT_AND_RUN=1` on systems without FUSE).
 
+> **Windows SmartScreen:** the installer is not code-signed, so the first run shows
+> *"Windows protected your PC"*. This is a normal warning for unsigned apps, not a virus.
+> Click **More info → Run anyway** to install. (Signing would remove this — see
+> [Code signing](#code-signing).)
+
 Releases are published automatically by CI whenever a version tag (`v*`) is pushed, so the
 `releases/latest` page always links to current installers.
 
@@ -130,6 +135,24 @@ Run it to install MDViewer for the current user, add Start Menu / Desktop shortc
 register `.md` / `.mdown` / `.markdown` file associations so double-clicking a Markdown file opens
 MDViewer. Under the hood it runs `gradlew createDistributable` then compiles
 `packaging/windows/MDViewer.iss` with Inno Setup.
+
+## Code signing
+
+Release builds are **not code-signed**, so Windows SmartScreen shows *"Windows protected your PC"*
+on first run. It's a reputation check on unsigned downloads, not a malware flag — the bypass is
+**More info → Run anyway**.
+
+To remove the warning permanently, sign the installer with a certificate:
+
+- **Azure Trusted Signing** (~$9.99/mo) — Microsoft's service, quickest path to a signed build with
+  fast SmartScreen reputation.
+- **OV cert** (SSL.com, Sectigo, DigiCert) — ~$70–200/yr; clears "Unknown publisher" but may warn
+  briefly until reputation builds.
+- **EV cert** — ~$300–500/yr; historically grants reputation immediately.
+
+Modern signing uses a cloud key-holding service (Azure Trusted Signing, SSL.com eSigner, DigiCert
+KeyLocker) rather than a local `.pfx`, so CI signs via their API. Once you have credentials, wire a
+signing step into `.github/workflows/release.yml` before the `softprops/action-gh-release` step.
 
 ## Where your data lives
 
