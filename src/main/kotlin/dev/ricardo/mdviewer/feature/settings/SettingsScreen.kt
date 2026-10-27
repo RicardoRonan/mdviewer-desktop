@@ -82,7 +82,7 @@ fun SettingsScreen(
 
             SettingGroup(label = "ABOUT") {
                 Text(
-                    text = "MDViewer 1.0.0 - offline Markdown reader with portable annotations.",
+                    text = "MDViewer 1.0.1 - offline Markdown reader with portable annotations.",
                     style = MaterialTheme.typography.bodySmall,
                     color = uber.body,
                 )

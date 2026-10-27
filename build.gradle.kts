@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "dev.ricardo"
-version = "1.0.0"
+version = "1.0.1"
 
 kotlin {
     jvmToolchain(17)
@@ -50,7 +50,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Exe)
             packageName = "MDViewer"
-            packageVersion = "1.0.0"
+            packageVersion = "1.0.1"
             description = "Offline Markdown reader with block-anchored annotations"
             vendor = "Ricardo"
             copyright = "MIT"

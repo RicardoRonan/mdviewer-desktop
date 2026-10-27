@@ -9,7 +9,7 @@
 
 #define MyAppName "MDViewer"
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0.0"
+  #define MyAppVersion "1.0.1"
 #endif
 #ifndef MyAppExeDir
   ; Default: the jpackage app-image folder produced by gradle createDistributable.

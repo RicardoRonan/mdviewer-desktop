@@ -6,7 +6,7 @@ setlocal enabledelayedexpansion
 set "ROOT=%~dp0.."
 cd /d "%ROOT%"
 
-set "VERSION=1.0.0"
+set "VERSION=1.0.1"
 set "APP_NAME=MDViewer"
 set "APP_IMAGE=%ROOT%\build\compose\binaries\main\app\%APP_NAME%"
 set "RELEASE=%ROOT%\release"
