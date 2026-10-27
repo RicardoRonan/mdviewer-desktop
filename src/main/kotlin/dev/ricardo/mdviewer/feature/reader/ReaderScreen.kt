@@ -22,15 +22,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -50,7 +49,14 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.contentDescription
@@ -80,7 +86,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
+@OptIn(FlowPreview::class)
 @Composable
 fun ReaderScreen(
     path: String,
@@ -227,7 +233,24 @@ fun ReaderScreen(
     val highlights = remember(state.resolved) { buildHighlights(state.resolved) }
     val orphanCount = state.resolved.count { it.orphaned }
 
-    Box(Modifier.fillMaxSize().background(uber.canvas)) {
+    // The action bar outlives the live text selection: a field collapses its own selection when it
+    // loses focus, which must not pull the bar out from under the button being pressed.
+    var heldSelection by remember { mutableStateOf<Pair<String, IntRange>?>(null) }
+    if (activeSelection != null) heldSelection = activeSelection
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(uber.canvas)
+            .onPreviewKeyEvent { event ->
+                if (event.type == KeyEventType.KeyDown && event.key == Key.Escape && activeSelection != null) {
+                    activeSelection = null
+                    true
+                } else {
+                    false
+                }
+            },
+    ) {
         Column(Modifier.fillMaxSize()) {
             AppTopBar(
                 title = state.documentName.ifBlank { "Reader" },
@@ -261,6 +284,7 @@ fun ReaderScreen(
                             } else {
                                 ReaderMenuItem("Edit") {
                                     showFileMenu = false
+                                    activeSelection = null
                                     if (!draftReady) draft = TextFieldValue(state.source)
                                     draftReady = true
                                     viewModel.setEditing(true)
@@ -291,36 +315,6 @@ fun ReaderScreen(
                     }
                 },
             )
-
-            var heldSelection by remember { mutableStateOf<Pair<String, IntRange>?>(null) }
-            if (activeSelection != null) heldSelection = activeSelection
-            AnimatedVisibility(
-                visible = !state.editing && activeSelection != null,
-                enter = fadeIn(motionTween(Motion.Quick, motion)) + expandVertically(motionTween(Motion.Quick, motion)),
-                exit = fadeOut(motionTween(Motion.Quick, motion)) + shrinkVertically(motionTween(Motion.Quick, motion)),
-            ) {
-                heldSelection?.let { selection ->
-                    val (blockId, range) = selection
-                    val blockText = state.blocks.firstOrNull { it.id == blockId }?.plainText().orEmpty()
-                    val start = range.first.coerceIn(0, blockText.length)
-                    val end = (range.last + 1).coerceIn(start, blockText.length)
-                    SelectionActionBar(
-                        onHighlight = { color ->
-                            viewModel.addHighlight(blockId, range, color)
-                            activeSelection = null
-                        },
-                        onNote = {
-                            noteTarget = blockId to range
-                            activeSelection = null
-                        },
-                        onCopy = {
-                            clipboard.setText(AnnotatedString(blockText.substring(start, end)))
-                            scope.launch { snackbarHostState.showSnackbar("Copied") }
-                            activeSelection = null
-                        },
-                    )
-                }
-            }
 
             Crossfade(
                 targetState = readerMode,
@@ -386,6 +380,37 @@ fun ReaderScreen(
                         Spacer(Modifier.height(64.dp))
                     }
                 }
+            }
+        }
+
+        AnimatedVisibility(
+            visible = !state.editing && activeSelection != null,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = spacing.lg, vertical = spacing.xl),
+            enter = fadeIn(motionTween(Motion.Quick, motion)) + expandVertically(motionTween(Motion.Quick, motion)),
+            exit = fadeOut(motionTween(Motion.Quick, motion)) + shrinkVertically(motionTween(Motion.Quick, motion)),
+        ) {
+            heldSelection?.let { selection ->
+                val (blockId, range) = selection
+                val blockText = state.blocks.firstOrNull { it.id == blockId }?.plainText().orEmpty()
+                val start = range.first.coerceIn(0, blockText.length)
+                val end = (range.last + 1).coerceIn(start, blockText.length)
+                SelectionActionBar(
+                    onHighlight = { color ->
+                        viewModel.addHighlight(blockId, range, color)
+                        activeSelection = null
+                    },
+                    onNote = {
+                        noteTarget = blockId to range
+                        activeSelection = null
+                    },
+                    onCopy = {
+                        clipboard.setText(AnnotatedString(blockText.substring(start, end)))
+                        scope.launch { snackbarHostState.showSnackbar("Copied") }
+                        activeSelection = null
+                    },
+                )
             }
         }
 
@@ -535,10 +560,14 @@ private fun SelectionActionBar(
 ) {
     val spacing = LocalSpacing.current
     val uber = LocalUberColors.current
+    val shape = RoundedCornerShape(20.dp)
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = spacing.lg, vertical = spacing.sm),
+            .widthIn(max = 420.dp)
+            .clip(shape)
+            .background(uber.canvas)
+            .border(1.dp, uber.hairlineMid, shape)
+            .padding(horizontal = spacing.lg, vertical = spacing.md),
         verticalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
@@ -572,7 +601,6 @@ private fun SelectionActionBar(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun NoteSheet(
     quote: String,
@@ -583,73 +611,79 @@ private fun NoteSheet(
     val spacing = LocalSpacing.current
     var note by remember { mutableStateOf("") }
     var tagsText by remember { mutableStateOf("") }
+    val noteFocus = remember { FocusRequester() }
 
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = uber.canvas) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(spacing.xxl),
-            verticalArrangement = Arrangement.spacedBy(spacing.md),
-        ) {
-            Text("Add note", style = MaterialTheme.typography.headlineSmall, color = uber.ink)
-            if (quote.isNotBlank()) {
-                Text(
-                    text = "\u201C$quote\u201D",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = uber.body,
-                    maxLines = 3,
-                )
-            }
-            TextField(
-                value = note,
-                onValueChange = { note = it },
-                placeholder = { Text("Your note") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = uber.canvasSoft,
-                    unfocusedContainerColor = uber.canvasSoft,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = uber.ink,
-                    focusedTextColor = uber.ink,
-                    unfocusedTextColor = uber.ink,
-                ),
-            )
-            TextField(
-                value = tagsText,
-                onValueChange = { tagsText = it },
-                placeholder = { Text("Tags, comma separated") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = uber.canvasSoft,
-                    unfocusedContainerColor = uber.canvasSoft,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = uber.ink,
-                    focusedTextColor = uber.ink,
-                    unfocusedTextColor = uber.ink,
-                ),
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                PillButton(
-                    text = "Cancel",
-                    style = PillStyle.Subtle,
-                    onClick = onDismiss,
-                    modifier = Modifier.weight(1f),
-                )
-                PillButton(
-                    text = "Save",
-                    onClick = {
-                        onSave(
-                            note,
-                            tagsText.split(',').map { it.trim() }.filter { it.isNotEmpty() },
-                        )
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-            }
+    // A dialog window can open without handing keyboard focus to the field inside it; without this
+    // the note text silently goes nowhere. Retry for a couple of frames because the dialog content
+    // is not attached on the first composition pass.
+    LaunchedEffect(Unit) {
+        repeat(3) {
+            withFrameNanos { }
+            if (runCatching { noteFocus.requestFocus() }.isSuccess) return@LaunchedEffect
         }
     }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = uber.canvas,
+        title = { Text("Add note", style = MaterialTheme.typography.headlineSmall, color = uber.ink) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
+                if (quote.isNotBlank()) {
+                    Text(
+                        text = "\u201C$quote\u201D",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = uber.body,
+                        maxLines = 3,
+                    )
+                }
+                TextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    placeholder = { Text("Your note") },
+                    modifier = Modifier.fillMaxWidth().focusRequester(noteFocus),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = uber.canvasSoft,
+                        unfocusedContainerColor = uber.canvasSoft,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = uber.ink,
+                        focusedTextColor = uber.ink,
+                        unfocusedTextColor = uber.ink,
+                    ),
+                )
+                TextField(
+                    value = tagsText,
+                    onValueChange = { tagsText = it },
+                    placeholder = { Text("Tags, comma separated") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = uber.canvasSoft,
+                        unfocusedContainerColor = uber.canvasSoft,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = uber.ink,
+                        focusedTextColor = uber.ink,
+                        unfocusedTextColor = uber.ink,
+                    ),
+                )
+            }
+        },
+        confirmButton = {
+            PillButton(
+                text = "Save",
+                onClick = {
+                    onSave(
+                        note,
+                        tagsText.split(',').map { it.trim() }.filter { it.isNotEmpty() },
+                    )
+                },
+            )
+        },
+        dismissButton = {
+            PillButton(text = "Cancel", style = PillStyle.Subtle, onClick = onDismiss)
+        },
+    )
 }

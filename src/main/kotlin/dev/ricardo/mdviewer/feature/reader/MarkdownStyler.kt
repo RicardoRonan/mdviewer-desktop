@@ -23,9 +23,10 @@ object MarkdownStyler {
         highlights: List<TextHighlight>,
         uber: UberColors,
         codeBackground: Color,
+        textColor: Color = uber.ink,
     ): AnnotatedString {
         val builder = AnnotatedString.Builder()
-        appendInlines(builder, inlines, SpanStyle(color = uber.ink), uber, codeBackground)
+        appendInlines(builder, inlines, SpanStyle(color = textColor), uber, codeBackground)
         for (highlight in highlights) {
             val start = highlight.start.coerceIn(0, builder.length)
             val end = highlight.end.coerceIn(0, builder.length)

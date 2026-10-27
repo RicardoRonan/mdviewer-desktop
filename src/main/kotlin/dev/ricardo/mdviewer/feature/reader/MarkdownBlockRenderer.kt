@@ -26,6 +26,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import dev.ricardo.mdviewer.domain.markdown.MdBlock
+import dev.ricardo.mdviewer.domain.markdown.MdInline
+import dev.ricardo.mdviewer.domain.markdown.tableCellStart
 import dev.ricardo.mdviewer.ui.theme.LocalSpacing
 import dev.ricardo.mdviewer.ui.theme.LocalUberColors
 import dev.ricardo.mdviewer.ui.theme.MdBodyLarge
@@ -165,44 +167,109 @@ private fun RenderBlock(
             modifier = Modifier.padding(vertical = spacing.sm),
         )
 
-        is MdBlock.Table -> TableBlock(block, fontScale, uber)
+        is MdBlock.Table -> TableBlock(
+            block = block,
+            highlights = highlights,
+            fontScale = fontScale,
+            clearSelection = clearSelection,
+            onSelectionChange = onSelectionChange,
+            onLinkClick = onLinkClick,
+            uber = uber,
+        )
 
         is MdBlock.Image -> ImageBlock(block, loadRemoteImages, uber)
     }
 }
 
 @Composable
-private fun TableBlock(block: MdBlock.Table, fontScale: Float, uber: UberColors) {
-    val spacing = LocalSpacing.current
+private fun TableBlock(
+    block: MdBlock.Table,
+    highlights: List<TextHighlight>,
+    fontScale: Float,
+    clearSelection: Boolean,
+    onSelectionChange: (IntRange) -> Unit,
+    onLinkClick: (String) -> Unit,
+    uber: UberColors,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(uber.canvasSoft),
     ) {
-        TableRow(block.header, fontScale, uber, isHeader = true)
-        block.rows.forEach { row ->
+        TableRow(
+            table = block,
+            cells = block.header,
+            rowIndex = 0,
+            isHeader = true,
+            highlights = highlights,
+            fontScale = fontScale,
+            clearSelection = clearSelection,
+            onSelectionChange = onSelectionChange,
+            onLinkClick = onLinkClick,
+            uber = uber,
+        )
+        block.rows.forEachIndexed { index, row ->
             HorizontalDivider(color = uber.surfacePressed)
-            TableRow(row, fontScale, uber, isHeader = false)
+            TableRow(
+                table = block,
+                cells = row,
+                rowIndex = index + 1,
+                isHeader = false,
+                highlights = highlights,
+                fontScale = fontScale,
+                clearSelection = clearSelection,
+                onSelectionChange = onSelectionChange,
+                onLinkClick = onLinkClick,
+                uber = uber,
+            )
         }
     }
 }
 
 @Composable
-private fun TableRow(cells: List<String>, fontScale: Float, uber: UberColors, isHeader: Boolean) {
+private fun TableRow(
+    table: MdBlock.Table,
+    cells: List<String>,
+    rowIndex: Int,
+    isHeader: Boolean,
+    highlights: List<TextHighlight>,
+    fontScale: Float,
+    clearSelection: Boolean,
+    onSelectionChange: (IntRange) -> Unit,
+    onLinkClick: (String) -> Unit,
+    uber: UberColors,
+) {
     val spacing = LocalSpacing.current
+    val textColor = if (isHeader) uber.ink else uber.body
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.md, vertical = spacing.sm),
         horizontalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
-        cells.forEach { cell ->
-            Text(
-                text = cell,
+        cells.forEachIndexed { columnIndex, cell ->
+            val cellStart = tableCellStart(table.header, table.rows, rowIndex, columnIndex)
+            val cellEnd = cellStart + cell.length
+            val cellHighlights = highlights.mapNotNull { highlight ->
+                val from = maxOf(highlight.start, cellStart)
+                val to = minOf(highlight.end, cellEnd)
+                if (to <= from) null else TextHighlight(from - cellStart, to - cellStart, highlight.color)
+            }
+            SelectableMarkdownBlock(
+                text = MarkdownStyler.build(
+                    inlines = listOf(MdInline.Text(cell)),
+                    highlights = cellHighlights,
+                    uber = uber,
+                    codeBackground = uber.canvasSoft,
+                    textColor = textColor,
+                ),
                 style = MdBodyMedium.scaled(fontScale).copy(
                     fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
                 ),
-                color = if (isHeader) uber.ink else uber.body,
+                clearSelection = clearSelection,
+                onSelectionChange = onSelectionChange,
+                onLinkClick = onLinkClick,
                 modifier = Modifier.weight(1f),
+                selectionOffset = cellStart,
             )
         }
     }

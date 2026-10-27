@@ -60,6 +60,33 @@ class MarkdownParserTest {
     }
 
     @Test
+    fun `tables expose selectable plain text and annotatable offsets`() {
+        val source = "| Name | Value |\n| --- | --- |\n| alpha | one |\n| beta | two |"
+        val table = MarkdownParser.parse(source).single() as MdBlock.Table
+
+        assertEquals("Name\tValue\nalpha\tone\nbeta\ttwo", table.plainText())
+        assertTrue(table.isAnnotatable())
+
+        // Header cells, then a body cell in the second column of the first body row.
+        assertEquals(0, tableCellStart(table.header, table.rows, 0, 0))
+        assertEquals(5, tableCellStart(table.header, table.rows, 0, 1))
+        assertEquals(17, tableCellStart(table.header, table.rows, 1, 1))
+        assertEquals("one", table.plainText().substring(17, 20))
+    }
+
+    @Test
+    fun `table cell offsets match the plain text for ragged rows`() {
+        val header = listOf("a", "bb")
+        val rows = listOf(listOf("c"), listOf("dd", "e", "ff"))
+        val text = tablePlainText(header, rows)
+
+        assertEquals("a\tbb\nc\ndd\te\tff", text)
+        assertEquals("bb", text.substring(tableCellStart(header, rows, 0, 1), tableCellStart(header, rows, 0, 1) + 2))
+        assertEquals("c", text.substring(tableCellStart(header, rows, 1, 0), tableCellStart(header, rows, 1, 0) + 1))
+        assertEquals("ff", text.substring(tableCellStart(header, rows, 2, 2), tableCellStart(header, rows, 2, 2) + 2))
+    }
+
+    @Test
     fun `parses blockquotes and rules`() {
         val blocks = MarkdownParser.parse("> quoted words\n\n---")
         assertTrue(blocks[0] is MdBlock.Quote)

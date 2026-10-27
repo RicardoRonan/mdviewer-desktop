@@ -48,11 +48,38 @@ fun MdBlock.plainText(): String = when (this) {
     is MdBlock.ListItem -> inlineText(inlines)
     is MdBlock.Code -> code
     is MdBlock.Image -> alt
-    is MdBlock.Table -> ""
+    is MdBlock.Table -> tablePlainText(header, rows)
     is MdBlock.Rule -> ""
 }
 
 fun MdBlock.isAnnotatable(): Boolean = when (this) {
-    is MdBlock.Table, is MdBlock.Rule, is MdBlock.Image -> false
+    is MdBlock.Rule, is MdBlock.Image -> false
     else -> plainText().isNotBlank()
+}
+
+/**
+ * Canonical plain text for a table: cells joined with tabs inside a row, rows joined with
+ * newlines. Annotations over a table index into this string, so the renderer must map each
+ * cell's selection back to the same offsets.
+ */
+fun tablePlainText(header: List<String>, rows: List<List<String>>): String =
+    (listOf(header) + rows).joinToString("\n") { row -> row.joinToString("\t") }
+
+/** Offset of the first character of a cell in [tablePlainText]. Row 0 is the header. */
+fun tableCellStart(
+    header: List<String>,
+    rows: List<List<String>>,
+    rowIndex: Int,
+    columnIndex: Int,
+): Int {
+    val allRows = listOf(header) + rows
+    var offset = 0
+    for (r in 0 until rowIndex.coerceIn(0, allRows.size)) {
+        offset += allRows[r].sumOf { it.length } + (allRows[r].size - 1).coerceAtLeast(0) + 1
+    }
+    val row = allRows.getOrElse(rowIndex) { emptyList() }
+    for (c in 0 until columnIndex.coerceIn(0, row.size)) {
+        offset += row[c].length + 1
+    }
+    return offset
 }

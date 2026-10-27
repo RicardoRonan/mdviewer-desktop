@@ -25,6 +25,13 @@ import androidx.compose.ui.text.input.TextFieldValue
 /**
  * A read-only, selectable markdown text block. Selection offsets are reported upward; the reader
  * presents the action bar (Highlight / Note / Copy) so it stays reliably tappable.
+ *
+ * Collapsed selections are only reported when the reader taps inside this block. A text field
+ * collapses its own selection when it loses focus, and reporting that would tear down the action
+ * bar the moment the user presses one of its buttons.
+ *
+ * [selectionOffset] shifts reported offsets so callers can compose a selection out of several
+ * fields (table cells) that share one block id and one plain-text offset space.
  */
 @Suppress("DEPRECATION")
 @Composable
@@ -35,6 +42,7 @@ fun SelectableMarkdownBlock(
     onSelectionChange: (IntRange) -> Unit,
     onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    selectionOffset: Int = 0,
 ) {
     var value by remember { mutableStateOf(TextFieldValue(text)) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
@@ -46,10 +54,11 @@ fun SelectableMarkdownBlock(
         }
     }
 
-    LaunchedEffect(value.selection) {
+    LaunchedEffect(value.selection, selectionOffset) {
         val selection = value.selection
+        if (selection.collapsed) return@LaunchedEffect
         onSelectionChange(
-            if (selection.collapsed) IntRange.EMPTY else selection.min until selection.max,
+            (selection.min + selectionOffset) until (selection.max + selectionOffset),
         )
     }
 
@@ -86,14 +95,23 @@ fun SelectableMarkdownBlock(
                                 val tap = (change.position - origin).getDistance() <= slop &&
                                     change.uptimeMillis - down.uptimeMillis < longPress
                                 if (tap) {
-                                    val result = layout ?: break
-                                    val offset = result.getOffsetForPosition(change.position)
-                                    val url = text.getStringAnnotations(
-                                        LINK_TAG,
-                                        offset,
-                                        (offset + 1).coerceAtMost(text.length),
-                                    ).firstOrNull()?.item
-                                    if (!url.isNullOrBlank()) onLinkClick(url)
+                                    val result = layout
+                                    val offset = result?.getOffsetForPosition(change.position)
+                                    val url = if (offset != null) {
+                                        text.getStringAnnotations(
+                                            LINK_TAG,
+                                            offset,
+                                            (offset + 1).coerceAtMost(text.length),
+                                        ).firstOrNull()?.item
+                                    } else {
+                                        null
+                                    }
+                                    if (!url.isNullOrBlank()) {
+                                        onLinkClick(url)
+                                    } else {
+                                        // A tap without a drag is the reader dismissing the selection.
+                                        onSelectionChange(IntRange.EMPTY)
+                                    }
                                 }
                                 break
                             }
