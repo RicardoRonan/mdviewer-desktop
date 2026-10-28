@@ -65,13 +65,30 @@ fun chapterOutline(blocks: List<MdBlock>): List<Chapter> = blocks
     .filter { it.title.isNotBlank() }
 
 /**
+ * The window of at most [limit] chapters shown in the panel at once. The window slides so the
+ * active chapter stays visible as the reader scrolls, which keeps the menu short on long documents.
+ */
+fun visibleChapters(
+    chapters: List<Chapter>,
+    activeId: String?,
+    limit: Int = 5,
+): List<Chapter> {
+    if (chapters.size <= limit) return chapters
+    val activeIndex = chapters.indexOfFirst { it.blockId == activeId }
+    if (activeIndex < 0) return chapters.take(limit)
+    val start = (activeIndex - limit / 2).coerceIn(0, chapters.size - limit)
+    return chapters.subList(start, start + limit)
+}
+
+/**
  * Always-visible tick rail down the right edge of the reader. Hovering the ticks opens a panel
  * listing every heading in the document; picking one scrolls the reader to it.
  *
  * The container is wide enough for the open panel but carries no pointer handler of its own, so
  * text underneath stays selectable. Only the narrow tick strip takes input until the panel opens.
  * The panel opens to the left of the ticks so it doesn't cover the rail itself and stays hoverable
- * when moving the mouse from the ticks into the menu.
+ * when moving the mouse from the ticks into the menu. Only a short window of chapters is listed at
+ * once (see [visibleChapters]) and it slides as the reader scrolls.
  */
 @Composable
 fun ChapterRail(
@@ -195,7 +212,7 @@ private fun ChapterPanel(
             modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.xs),
         )
         LazyColumn {
-            items(chapters, key = { it.blockId }) { chapter ->
+            items(visibleChapters(chapters, activeId), key = { it.blockId }) { chapter ->
                 ChapterRow(
                     chapter = chapter,
                     active = chapter.blockId == activeId,

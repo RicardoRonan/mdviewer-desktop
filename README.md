@@ -64,9 +64,9 @@ Leave off `--args` to start at the library screen.
 ./gradlew test
 ```
 
-42 tests cover the main parts of the app: the Markdown parser, annotation anchoring, JSON storage,
+55 tests cover the main parts of the app: the Markdown parser, annotation anchoring, JSON storage,
 repositories, sidecar transfer, and formatting helpers. They also cover the Compose UI flows for
-the library and reader. An off-screen Skia render check writes
+the library and reader, plus the chapter rail outline and windowing. An off-screen Skia render check writes
 `build/reports/ui/markdown-render.png`.
 
 ## Build a Linux AppImage
