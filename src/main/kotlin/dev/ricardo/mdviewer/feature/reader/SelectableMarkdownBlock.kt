@@ -14,6 +14,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -97,7 +102,19 @@ fun SelectableMarkdownBlock(
         showNote = true
     }
 
-    Box(modifier) {
+    Box(
+        modifier.onPreviewKeyEvent { event ->
+            // Escape dismisses the note card first (W3C tooltip contract), then lets the reader
+            // clear its selection as before.
+            if (event.type == KeyEventType.KeyDown && event.key == Key.Escape && hoveredNote != null) {
+                hoveredNote = null
+                showNote = false
+                true
+            } else {
+                false
+            }
+        },
+    ) {
         CompositionLocalProvider(LocalTextToolbar provides suppression) {
             BasicTextField(
                 value = value,
@@ -120,7 +137,11 @@ fun SelectableMarkdownBlock(
                                     if (hoveredNote != null) hoveredNote = null
                                     continue
                                 }
-                                if (event.type != PointerEventType.Move) continue
+                                if (event.type != PointerEventType.Move &&
+                                    event.type != PointerEventType.Enter
+                                ) {
+                                    continue
+                                }
                                 val position = event.changes.firstOrNull()?.position ?: continue
                                 val result = layout ?: continue
                                 if (text.isEmpty()) continue

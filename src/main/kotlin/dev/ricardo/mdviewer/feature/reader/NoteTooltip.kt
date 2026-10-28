@@ -1,17 +1,20 @@
 package dev.ricardo.mdviewer.feature.reader
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -26,7 +29,14 @@ import dev.ricardo.mdviewer.ui.theme.MdBodyMedium
 import dev.ricardo.mdviewer.ui.theme.MdCaption
 import kotlin.math.roundToInt
 
-/** Compact note card shown over a highlighted range on hover. */
+/**
+ * Compact note card shown over a highlighted range on hover.
+ *
+ * Material 3's tooltip cannot carry this card: `PlainTooltip` is an extension on `TooltipScope`,
+ * which only `TooltipBox` provides, and `TooltipBox` anchors to a whole layout node rather than a
+ * character range. So the card stays ours, but it adopts Material's tooltip contract: announced
+ * through a polite live region, shown after a hover delay, dismissed by Escape and mouse-out.
+ */
 @Composable
 fun NoteTooltip(
     note: String,
@@ -41,7 +51,8 @@ fun NoteTooltip(
             .clip(shape)
             .background(uber.canvas)
             .border(1.dp, uber.hairlineMid.copy(alpha = 0.5f), shape)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp)
+            .semantics { liveRegion = LiveRegionMode.Polite },
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text(

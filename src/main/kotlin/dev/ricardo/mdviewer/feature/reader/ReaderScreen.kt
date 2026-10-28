@@ -411,6 +411,7 @@ fun ReaderScreen(
                                     scrollState.animateScrollTo((target - railOffsetPx).coerceAtLeast(0f).toInt())
                                 }
                             },
+                            scrollState = scrollState,
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
                                 .padding(end = spacing.xs),

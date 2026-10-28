@@ -32,6 +32,11 @@ links to the newest installers.
 - **Library folder browsing**: pick a folder, browse nested directories, and jump back into recents.
 - **Reader**: headings, paragraphs, quotes, lists, task lists, fenced code, GFM tables, images,
   horizontal rules, and clickable links.
+- **Chapter rail**: a compact strip on the right edge of the reader. Hover it to open a short
+  heading list (five at a time, following where you are), or drag it like a scrollbar to scrub the
+  document. Focus it and use Up/Down to jump between headings; Escape closes the list.
+- **Note tooltips**: hover a highlight that carries a note and the note appears over it. Plain
+  highlights stay silent. Escape dismisses the card.
 - **Annotations**: select text to highlight it in one of seven colors. Or attach a note with tags.
   Highlights survive later edits. Exact, prefix, and suffix anchoring makes that work. If a
   highlight can no longer be found, the app flags it as orphaned. It never vanishes on its own.
@@ -64,9 +69,10 @@ Leave off `--args` to start at the library screen.
 ./gradlew test
 ```
 
-55 tests cover the main parts of the app: the Markdown parser, annotation anchoring, JSON storage,
+62 tests cover the main parts of the app: the Markdown parser, annotation anchoring, JSON storage,
 repositories, sidecar transfer, and formatting helpers. They also cover the Compose UI flows for
-the library and reader, plus the chapter rail outline and windowing. An off-screen Skia render check writes
+the library and reader, plus the chapter rail outline, windowing, hover and keyboard jumps, and
+note tooltips. An off-screen Skia render check writes
 `build/reports/ui/markdown-render.png`.
 
 ## Build a Linux AppImage
@@ -80,14 +86,14 @@ The script builds the runtime image. It assembles an AppDir with a desktop entry
 then produces:
 
 ```text
-release/MDViewer-1.1.0-x86_64.AppImage
+release/MDViewer-1.2.0-x86_64.AppImage
 ```
 
 Run it directly:
 
 ```bash
-chmod +x release/MDViewer-1.1.0-x86_64.AppImage
-./release/MDViewer-1.1.0-x86_64.AppImage ~/Documents/notes.md
+chmod +x release/MDViewer-1.2.0-x86_64.AppImage
+./release/MDViewer-1.2.0-x86_64.AppImage ~/Documents/notes.md
 ```
 
 On systems without FUSE, prefix the command with `APPIMAGE_EXTRACT_AND_RUN=1`.
@@ -97,8 +103,8 @@ entry:
 
 ```bash
 mkdir -p ~/.local/bin ~/Applications
-cp release/MDViewer-1.1.0-x86_64.AppImage ~/Applications/
-ln -sf ~/Applications/MDViewer-1.1.0-x86_64.AppImage ~/.local/bin/mdviewer
+cp release/MDViewer-1.2.0-x86_64.AppImage ~/Applications/
+ln -sf ~/Applications/MDViewer-1.2.0-x86_64.AppImage ~/.local/bin/mdviewer
 cat > ~/.local/share/applications/mdviewer.desktop <<EOF
 [Desktop Entry]
 Type=Application
@@ -130,7 +136,7 @@ winget install JRSoftware.InnoSetup
 The script produces:
 
 ```text
-release\MDViewer-1.1.0-Setup.exe
+release\MDViewer-1.2.0-Setup.exe
 ```
 
 Run it to install MDViewer for the current user. It adds Start Menu and Desktop shortcuts. It can

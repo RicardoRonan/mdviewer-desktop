@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 export JAVA_HOME="${JAVA_HOME:-/home/ricardo/Android/toolchain/jdk-17}"
-VERSION="${VERSION:-1.1.0}"
+VERSION="${VERSION:-1.2.0}"
 TOOL_DIR="$ROOT/build/appimage-tool"
 TOOL="$TOOL_DIR/appimagetool"
 WORK="$ROOT/build/appimage"

@@ -5,9 +5,13 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.ScrollbarStyle
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -23,15 +27,25 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -94,12 +108,18 @@ fun visibleChapters(
  *
  * The whole rail is a compact block, [railWidth] wide and no taller than [railMaxHeight], so it
  * never takes over the reader area.
+ *
+ * The strip doubles as a real [VerticalScrollbar]: dragging it scrubs the document using the
+ * framework's proven adapter, while the ticks overlaid on top keep encoding heading depth and the
+ * current section. Keyboard users get the same panel: focusing the strip opens it, Up/Down moves
+ * between headings and jumps, and Escape closes it.
  */
 @Composable
 fun ChapterRail(
     chapters: List<Chapter>,
     activeId: String?,
     onJump: (String) -> Unit,
+    scrollState: ScrollState,
     modifier: Modifier = Modifier,
 ) {
     if (chapters.isEmpty()) return
@@ -110,10 +130,23 @@ fun ChapterRail(
     val panelHover = remember { MutableInteractionSource() }
     val tickHovered by railHover.collectIsHoveredAsState()
     val panelHovered by panelHover.collectIsHoveredAsState()
-    val expanded = tickHovered || panelHovered
+    var keyboardOpen by remember { mutableStateOf(false) }
+    val expanded = tickHovered || panelHovered || keyboardOpen
     val tickWidth = 14.dp
     val railWidth = 150.dp
     val railMaxHeight = 300.dp
+
+    // Arrow keys move one heading at a time. The forced index keeps repeated presses snappy while
+    // the scroll animation (and therefore activeId) is still catching up.
+    val activeIndex = chapters.indexOfFirst { it.blockId == activeId }
+    var forcedIndex by remember(chapters) { mutableStateOf(-1) }
+    LaunchedEffect(activeId, chapters) { forcedIndex = -1 }
+    fun moveBy(delta: Int) {
+        val base = forcedIndex.takeIf { it >= 0 } ?: activeIndex.takeIf { it >= 0 } ?: 0
+        val target = (base + delta).coerceIn(0, chapters.lastIndex)
+        forcedIndex = target
+        onJump(chapters[target].blockId)
+    }
 
     BoxWithConstraints(
         modifier = modifier
@@ -129,8 +162,43 @@ fun ChapterRail(
                 .width(tickWidth)
                 .align(Alignment.CenterEnd)
                 .hoverable(railHover)
+                .onFocusChanged { focus -> keyboardOpen = focus.isFocused }
+                .focusable()
+                .onPreviewKeyEvent { event ->
+                    if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                    when (event.key) {
+                        Key.Escape -> {
+                            keyboardOpen = false
+                            true
+                        }
+
+                        Key.DirectionDown -> {
+                            moveBy(1)
+                            true
+                        }
+
+                        Key.DirectionUp -> {
+                            moveBy(-1)
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
                 .semantics { contentDescription = "Chapters" },
         ) {
+            VerticalScrollbar(
+                adapter = rememberScrollbarAdapter(scrollState),
+                modifier = Modifier.fillMaxHeight().fillMaxWidth(),
+                style = ScrollbarStyle(
+                    minimalHeight = 8.dp,
+                    thickness = 5.dp,
+                    shape = RoundedCornerShape(3.dp),
+                    hoverColor = uber.hairlineMid.copy(alpha = 0.75f),
+                    unhoverColor = uber.hairlineMid.copy(alpha = 0.4f),
+                    hoverDurationMillis = 120,
+                ),
+            )
             ChapterTicks(
                 chapters = chapters,
                 activeId = activeId,
