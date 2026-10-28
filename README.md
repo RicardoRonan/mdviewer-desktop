@@ -80,14 +80,14 @@ The script builds the runtime image. It assembles an AppDir with a desktop entry
 then produces:
 
 ```text
-release/MDViewer-1.0.1-x86_64.AppImage
+release/MDViewer-1.1.0-x86_64.AppImage
 ```
 
 Run it directly:
 
 ```bash
-chmod +x release/MDViewer-1.0.1-x86_64.AppImage
-./release/MDViewer-1.0.1-x86_64.AppImage ~/Documents/notes.md
+chmod +x release/MDViewer-1.1.0-x86_64.AppImage
+./release/MDViewer-1.1.0-x86_64.AppImage ~/Documents/notes.md
 ```
 
 On systems without FUSE, prefix the command with `APPIMAGE_EXTRACT_AND_RUN=1`.
@@ -97,8 +97,8 @@ entry:
 
 ```bash
 mkdir -p ~/.local/bin ~/Applications
-cp release/MDViewer-1.0.1-x86_64.AppImage ~/Applications/
-ln -sf ~/Applications/MDViewer-1.0.1-x86_64.AppImage ~/.local/bin/mdviewer
+cp release/MDViewer-1.1.0-x86_64.AppImage ~/Applications/
+ln -sf ~/Applications/MDViewer-1.1.0-x86_64.AppImage ~/.local/bin/mdviewer
 cat > ~/.local/share/applications/mdviewer.desktop <<EOF
 [Desktop Entry]
 Type=Application
@@ -130,7 +130,7 @@ winget install JRSoftware.InnoSetup
 The script produces:
 
 ```text
-release\MDViewer-1.0.1-Setup.exe
+release\MDViewer-1.1.0-Setup.exe
 ```
 
 Run it to install MDViewer for the current user. It adds Start Menu and Desktop shortcuts. It can
