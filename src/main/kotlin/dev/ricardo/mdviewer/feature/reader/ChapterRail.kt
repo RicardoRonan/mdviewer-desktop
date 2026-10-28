@@ -65,11 +65,13 @@ fun chapterOutline(blocks: List<MdBlock>): List<Chapter> = blocks
     .filter { it.title.isNotBlank() }
 
 /**
- * Always-visible tick rail down the left edge of the reader. Hovering the ticks opens a panel
+ * Always-visible tick rail down the right edge of the reader. Hovering the ticks opens a panel
  * listing every heading in the document; picking one scrolls the reader to it.
  *
  * The container is wide enough for the open panel but carries no pointer handler of its own, so
  * text underneath stays selectable. Only the narrow tick strip takes input until the panel opens.
+ * The panel opens to the left of the ticks so it doesn't cover the rail itself and stays hoverable
+ * when moving the mouse from the ticks into the menu.
  */
 @Composable
 fun ChapterRail(
@@ -83,7 +85,10 @@ fun ChapterRail(
     val uber = LocalUberColors.current
     val spacing = LocalSpacing.current
     val railHover = remember { MutableInteractionSource() }
-    val expanded by railHover.collectIsHoveredAsState()
+    val panelHover = remember { MutableInteractionSource() }
+    val tickHovered by railHover.collectIsHoveredAsState()
+    val panelHovered by panelHover.collectIsHoveredAsState()
+    val expanded = tickHovered || panelHovered
     val tickWidth = 18.dp
     val panelWidth = 320.dp
 
@@ -98,6 +103,7 @@ fun ChapterRail(
             modifier = Modifier
                 .fillMaxHeight()
                 .width(tickWidth)
+                .align(Alignment.CenterEnd)
                 .hoverable(railHover)
                 .semantics { contentDescription = "Chapters" },
         ) {
@@ -112,10 +118,11 @@ fun ChapterRail(
         AnimatedVisibility(
             visible = expanded,
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .padding(start = tickWidth + spacing.sm),
-            enter = fadeIn() + expandHorizontally(expandFrom = Alignment.Start),
-            exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.Start),
+                .align(Alignment.CenterEnd)
+                .padding(end = tickWidth + spacing.sm)
+                .hoverable(panelHover),
+            enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
+            exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End),
         ) {
             ChapterPanel(
                 chapters = chapters,

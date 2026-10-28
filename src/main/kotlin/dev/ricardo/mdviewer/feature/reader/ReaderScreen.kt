@@ -412,8 +412,8 @@ fun ReaderScreen(
                                 }
                             },
                             modifier = Modifier
-                                .align(Alignment.CenterStart)
-                                .padding(start = spacing.xs),
+                                .align(Alignment.CenterEnd)
+                                .padding(end = spacing.xs),
                         )
                     }
                 }
