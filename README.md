@@ -167,6 +167,65 @@ Put it before the `softprops/action-gh-release` step.
 Linux paths respect `XDG_CONFIG_HOME` and `XDG_DATA_HOME`. Uninstalling the Windows app leaves
 these files alone. Your library and highlights are never deleted with the program.
 
+### Share your notes with an AI agent
+
+Every highlight and note lives in `library.json`. That one file is what you hand to an AI agent
+when you want it to read what you marked:
+
+- **Windows:** `%LOCALAPPDATA%\mdviewer\library.json`
+- **Linux:** `~/.local/share/mdviewer/library.json`
+
+To open it on Windows, press Win+R, paste `%LOCALAPPDATA%\mdviewer`, and press Enter. Then
+double-click `library.json` and paste its contents into the chat, or attach the file.
+
+The file has two lists:
+
+- `documents` is the index behind the library screen.
+- `annotations` holds one entry per highlight, note, or bookmark.
+
+```json
+{
+  "documents": [],
+  "annotations": [
+    {
+      "docUri": "file:///C:/Users/me/Documents/plan.md",
+      "kind": "NOTE",
+      "color": "#FFE8A3",
+      "selector": {
+        "exact": "the sentence you selected",
+        "prefix": "",
+        "suffix": "",
+        "start": 12,
+        "end": 36,
+        "blockId": "b7"
+      },
+      "note": "Check this against the spec",
+      "tags": ["todo"],
+      "deleted": false,
+      "orphaned": false
+    }
+  ]
+}
+```
+
+Read it like this:
+
+- `docUri` names the Markdown file the entry belongs to.
+- `selector.exact` repeats the text you selected, so an agent can quote it without opening the
+  file.
+- `note` and `tags` hold what you wrote.
+- `orphaned` means the quote no longer matches after an edit. The note is still there.
+
+Two things to know before you share it. The file lists the paths of every document in your
+library. And the app rewrites the whole file on each save, so copy it or paste it rather than
+pointing an agent at the live file.
+
+Each entry also carries `id`, `createdAt`, and `updatedAt`, left out of the sample above for
+length.
+
+To share one document instead of the whole library, use **Export** in the reader. It writes a
+`<name>.md.annot.json` sidecar and a readable Markdown digest.
+
 ## Project layout
 
 ```text

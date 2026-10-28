@@ -17,8 +17,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -40,6 +42,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,6 +61,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -232,6 +236,18 @@ fun ReaderScreen(
 
     val highlights = remember(state.resolved) { buildHighlights(state.resolved) }
     val orphanCount = state.resolved.count { it.orphaned }
+    val chapters = remember(state.blocks) { chapterOutline(state.blocks) }
+    val blockOffsets = remember { mutableStateMapOf<String, Float>() }
+    val railOffsetPx = with(LocalDensity.current) { 18.dp.toPx() }
+    val activeChapterId = remember(scrollState.value, blockOffsets, chapters) {
+        if (chapters.isEmpty()) return@remember null
+        val scroll = scrollState.value.toFloat()
+        val hits = chapters.mapNotNull { chapter ->
+            val y = blockOffsets[chapter.blockId] ?: return@mapNotNull null
+            if (y <= scroll + 80f) chapter.blockId to y else null
+        }
+        hits.maxByOrNull { it.second }?.first ?: chapters.first().blockId
+    }
 
     // The action bar outlives the live text selection: a field collapses its own selection when it
     // loses focus, which must not pull the bar out from under the button being pressed.
@@ -342,42 +358,63 @@ fun ReaderScreen(
                         action = { PillButton("Retry", onClick = viewModel::load) },
                     )
 
-                    else -> Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(scrollState)
-                            .padding(horizontal = spacing.xl),
-                    ) {
-                        if (orphanCount > 0) {
-                            Spacer(Modifier.height(spacing.md))
-                            Text(
-                                text = "$orphanCount annotation(s) could not be re-anchored after edits.",
-                                color = uber.body,
-                                style = MaterialTheme.typography.bodySmall,
-                            )
+                    else -> Box(modifier = Modifier.fillMaxSize()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(scrollState)
+                                .padding(horizontal = spacing.xl),
+                        ) {
+                            if (orphanCount > 0) {
+                                Spacer(Modifier.height(spacing.md))
+                                Text(
+                                    text = "$orphanCount annotation(s) could not be re-anchored after edits.",
+                                    color = uber.body,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                            }
+                            Spacer(Modifier.height(spacing.lg))
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                MarkdownContent(
+                                    blocks = state.blocks,
+                                    highlights = highlights,
+                                    fontScale = state.settings.fontScale,
+                                    loadRemoteImages = state.settings.loadRemoteImages,
+                                    clearSelection = activeSelection == null,
+                                    onSelectionChange = { blockId, range ->
+                                        activeSelection = if (range.isEmpty()) null else blockId to range
+                                    },
+                                    onLinkClick = { url ->
+                                        val trimmed = url.trim()
+                                        val allowed = trimmed.startsWith("https://", ignoreCase = true) ||
+                                            trimmed.startsWith("http://", ignoreCase = true) ||
+                                            trimmed.startsWith("mailto:", ignoreCase = true)
+                                        if (allowed) runCatching { uriHandler.openUri(trimmed) }
+                                    },
+                                    modifier = Modifier.widthIn(max = state.settings.maxLineWidthDp.dp),
+                                    onBlockPosition = { blockId, y ->
+                                        blockOffsets[blockId] = y
+                                    },
+                                )
+                            }
+                            Spacer(Modifier.height(64.dp))
                         }
-                        Spacer(Modifier.height(spacing.lg))
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            MarkdownContent(
-                                blocks = state.blocks,
-                                highlights = highlights,
-                                fontScale = state.settings.fontScale,
-                                loadRemoteImages = state.settings.loadRemoteImages,
-                                clearSelection = activeSelection == null,
-                                onSelectionChange = { blockId, range ->
-                                    activeSelection = if (range.isEmpty()) null else blockId to range
-                                },
-                                onLinkClick = { url ->
-                                    val trimmed = url.trim()
-                                    val allowed = trimmed.startsWith("https://", ignoreCase = true) ||
-                                        trimmed.startsWith("http://", ignoreCase = true) ||
-                                        trimmed.startsWith("mailto:", ignoreCase = true)
-                                    if (allowed) runCatching { uriHandler.openUri(trimmed) }
-                                },
-                                modifier = Modifier.widthIn(max = state.settings.maxLineWidthDp.dp),
-                            )
-                        }
-                        Spacer(Modifier.height(64.dp))
+                        ChapterRail(
+                            chapters = chapters,
+                            activeId = activeChapterId,
+                            onJump = { blockId ->
+                                val target = blockOffsets[blockId] ?: return@ChapterRail
+                                scope.launch {
+                                    scrollState.animateScrollTo((target - railOffsetPx).coerceAtLeast(0f).toInt())
+                                }
+                            },
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(start = spacing.xs),
+                        )
                     }
                 }
             }
@@ -536,7 +573,13 @@ private fun buildHighlights(resolved: List<ResolvedAnnotation>): Map<String, Lis
                 if (end <= start) return@mapNotNull null
                 val base = parseHexColor(item.annotation.color, HighlightYellow)
                 val alpha = if (item.annotation.kind == AnnotationKind.NOTE) 0.65f else 0.72f
-                TextHighlight(start, end, base.copy(alpha = alpha))
+                TextHighlight(
+                    start = start,
+                    end = end,
+                    color = base.copy(alpha = alpha),
+                    note = item.annotation.note,
+                    tags = item.annotation.tags,
+                )
             }
         }
 }

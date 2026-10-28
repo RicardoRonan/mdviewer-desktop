@@ -20,6 +20,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,7 @@ fun MarkdownContent(
     onSelectionChange: (String, IntRange) -> Unit,
     onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier,
+    onBlockPosition: (String, Float) -> Unit = { _, _ -> },
 ) {
     val spacing = LocalSpacing.current
     val uber = LocalUberColors.current
@@ -54,16 +57,24 @@ fun MarkdownContent(
         verticalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
         blocks.forEach { block ->
-            RenderBlock(
-                block = block,
-                highlights = highlights[block.id].orEmpty(),
-                fontScale = fontScale,
-                loadRemoteImages = loadRemoteImages,
-                uber = uber,
-                clearSelection = clearSelection,
-                onSelectionChange = { range -> onSelectionChange(block.id, range) },
-                onLinkClick = onLinkClick,
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coordinates ->
+                        onBlockPosition(block.id, coordinates.positionInParent().y)
+                    },
+            ) {
+                RenderBlock(
+                    block = block,
+                    highlights = highlights[block.id].orEmpty(),
+                    fontScale = fontScale,
+                    loadRemoteImages = loadRemoteImages,
+                    uber = uber,
+                    clearSelection = clearSelection,
+                    onSelectionChange = { range -> onSelectionChange(block.id, range) },
+                    onLinkClick = onLinkClick,
+                )
+            }
         }
     }
 }
@@ -90,6 +101,7 @@ private fun RenderBlock(
                 onSelectionChange = onSelectionChange,
                 onLinkClick = onLinkClick,
                 modifier = Modifier.padding(top = if (block.level <= 2) spacing.lg else spacing.sm),
+                notes = highlights,
             )
         }
 
@@ -99,6 +111,7 @@ private fun RenderBlock(
             clearSelection = clearSelection,
             onSelectionChange = onSelectionChange,
             onLinkClick = onLinkClick,
+            notes = highlights,
         )
 
         is MdBlock.Quote -> Row(
@@ -119,6 +132,7 @@ private fun RenderBlock(
                 onSelectionChange = onSelectionChange,
                 onLinkClick = onLinkClick,
                 modifier = Modifier.weight(1f),
+                notes = highlights,
             )
         }
 
@@ -139,6 +153,7 @@ private fun RenderBlock(
                 onSelectionChange = onSelectionChange,
                 onLinkClick = onLinkClick,
                 modifier = Modifier.weight(1f),
+                notes = highlights,
             )
         }
 
@@ -270,6 +285,7 @@ private fun TableRow(
                 onLinkClick = onLinkClick,
                 modifier = Modifier.weight(1f),
                 selectionOffset = cellStart,
+                notes = cellHighlights,
             )
         }
     }

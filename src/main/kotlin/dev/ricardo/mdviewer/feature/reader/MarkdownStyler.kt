@@ -11,7 +11,13 @@ import androidx.compose.ui.text.withStyle
 import dev.ricardo.mdviewer.domain.markdown.MdInline
 import dev.ricardo.mdviewer.ui.theme.UberColors
 
-data class TextHighlight(val start: Int, val end: Int, val color: Color)
+data class TextHighlight(
+    val start: Int,
+    val end: Int,
+    val color: Color,
+    val note: String = "",
+    val tags: List<String> = emptyList(),
+)
 
 const val LINK_TAG = "URL"
 

@@ -13,14 +13,21 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalTextToolbar
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import kotlinx.coroutines.delay
 
 /**
  * A read-only, selectable markdown text block. Selection offsets are reported upward; the reader
@@ -32,6 +39,10 @@ import androidx.compose.ui.text.input.TextFieldValue
  *
  * [selectionOffset] shifts reported offsets so callers can compose a selection out of several
  * fields (table cells) that share one block id and one plain-text offset space.
+ *
+ * [notes] are this block's annotated ranges that carry note text. Hovering one shows its note in a
+ * small card. Plain highlights stay silent, and note cards stay out of the way while the pointer is
+ * pressed or a selection is live, so drag-selection never fights the card.
  */
 @Suppress("DEPRECATION")
 @Composable
@@ -43,10 +54,16 @@ fun SelectableMarkdownBlock(
     onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier,
     selectionOffset: Int = 0,
+    notes: List<TextHighlight> = emptyList(),
 ) {
     var value by remember { mutableStateOf(TextFieldValue(text)) }
     var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
     val suppression = remember { SuppressSystemTextToolbar() }
+    val gapPx = with(LocalDensity.current) { 6.dp.roundToPx() }
+
+    var hoveredNote by remember { mutableStateOf<TextHighlight?>(null) }
+    var hoverAnchor by remember { mutableStateOf(Rect.Zero) }
+    var showNote by remember { mutableStateOf(false) }
 
     LaunchedEffect(text) {
         if (value.annotatedString != text) {
@@ -68,6 +85,18 @@ fun SelectableMarkdownBlock(
         }
     }
 
+    // Hover-to-preview is deliberately delayed: at ~320 ms a note never flashes while the pointer
+    // crosses a document, but it still feels immediate when the reader stops on a highlight.
+    LaunchedEffect(hoveredNote, value.selection) {
+        val note = hoveredNote
+        if (note == null || !value.selection.collapsed) {
+            showNote = false
+            return@LaunchedEffect
+        }
+        delay(320)
+        showNote = true
+    }
+
     Box(modifier) {
         CompositionLocalProvider(LocalTextToolbar provides suppression) {
             BasicTextField(
@@ -78,6 +107,39 @@ fun SelectableMarkdownBlock(
                 onTextLayout = { layout = it },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .pointerInput(text, notes) {
+                        if (notes.none { it.note.isNotBlank() }) return@pointerInput
+                        awaitPointerEventScope {
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                                if (event.type == PointerEventType.Exit) {
+                                    if (hoveredNote != null) hoveredNote = null
+                                    continue
+                                }
+                                if (event.changes.any { it.pressed }) {
+                                    if (hoveredNote != null) hoveredNote = null
+                                    continue
+                                }
+                                if (event.type != PointerEventType.Move) continue
+                                val position = event.changes.firstOrNull()?.position ?: continue
+                                val result = layout ?: continue
+                                if (text.isEmpty()) continue
+                                val offset = result
+                                    .getOffsetForPosition(position)
+                                    .coerceIn(0, text.length - 1)
+                                val note = noteUnder(offset, notes)
+                                if (note == null) {
+                                    if (hoveredNote != null) hoveredNote = null
+                                    continue
+                                }
+                                if (note != hoveredNote) {
+                                    hoveredNote = note
+                                    val box = result.getBoundingBox(offset)
+                                    hoverAnchor = Rect(box.left, box.top, box.right, box.bottom)
+                                }
+                            }
+                        }
+                    }
                     .pointerInput(text) {
                         val slop = viewConfiguration.touchSlop
                         val longPress = viewConfiguration.longPressTimeoutMillis
@@ -118,6 +180,16 @@ fun SelectableMarkdownBlock(
                         }
                     },
             )
+        }
+
+        val note = hoveredNote
+        if (showNote && note != null && value.selection.collapsed) {
+            Popup(
+                popupPositionProvider = NoteTooltipPositionProvider(hoverAnchor, gapPx),
+                properties = PopupProperties(focusable = false, dismissOnClickOutside = false),
+            ) {
+                NoteTooltip(note = note.note, tags = note.tags)
+            }
         }
     }
 }
