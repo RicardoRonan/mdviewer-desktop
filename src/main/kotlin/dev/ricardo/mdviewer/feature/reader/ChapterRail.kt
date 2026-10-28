@@ -36,7 +36,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.ricardo.mdviewer.domain.markdown.MdBlock
 import dev.ricardo.mdviewer.domain.markdown.plainText
 import dev.ricardo.mdviewer.ui.theme.LocalSpacing
@@ -89,6 +91,9 @@ fun visibleChapters(
  * The panel opens to the left of the ticks so it doesn't cover the rail itself and stays hoverable
  * when moving the mouse from the ticks into the menu. Only a short window of chapters is listed at
  * once (see [visibleChapters]) and it slides as the reader scrolls.
+ *
+ * The whole rail is a compact block, [railWidth] wide and no taller than [railMaxHeight], so it
+ * never takes over the reader area.
  */
 @Composable
 fun ChapterRail(
@@ -106,15 +111,17 @@ fun ChapterRail(
     val tickHovered by railHover.collectIsHoveredAsState()
     val panelHovered by panelHover.collectIsHoveredAsState()
     val expanded = tickHovered || panelHovered
-    val tickWidth = 18.dp
-    val panelWidth = 320.dp
+    val tickWidth = 14.dp
+    val railWidth = 150.dp
+    val railMaxHeight = 300.dp
 
     BoxWithConstraints(
         modifier = modifier
-            .fillMaxHeight()
-            .width(panelWidth),
+            .width(railWidth)
+            .heightIn(max = railMaxHeight)
+            .fillMaxHeight(),
     ) {
-        val panelMaxHeight = maxHeight * 0.7f
+        val panelMaxHeight = maxHeight * 0.85f
 
         Box(
             modifier = Modifier
@@ -136,7 +143,7 @@ fun ChapterRail(
             visible = expanded,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .padding(end = tickWidth + spacing.sm)
+                .padding(end = tickWidth + spacing.xs)
                 .hoverable(panelHover),
             enter = fadeIn() + expandHorizontally(expandFrom = Alignment.End),
             exit = fadeOut() + shrinkHorizontally(shrinkTowards = Alignment.End),
@@ -146,7 +153,9 @@ fun ChapterRail(
                 activeId = activeId,
                 onJump = onJump,
                 uber = uber,
-                modifier = Modifier.heightIn(max = panelMaxHeight),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = panelMaxHeight),
             )
         }
     }
@@ -196,20 +205,19 @@ private fun ChapterPanel(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalSpacing.current
-    val shape = RoundedCornerShape(16.dp)
+    val shape = RoundedCornerShape(12.dp)
     Column(
         modifier = modifier
-            .width(300.dp)
             .clip(shape)
             .background(uber.canvas)
             .border(1.dp, uber.hairlineMid.copy(alpha = 0.45f), shape)
-            .padding(vertical = spacing.sm),
+            .padding(vertical = spacing.xs),
     ) {
         Text(
             text = "CHAPTERS",
             style = MdCaption,
             color = uber.mute,
-            modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.xs),
+            modifier = Modifier.padding(horizontal = spacing.md, vertical = spacing.xxs),
         )
         LazyColumn {
             items(visibleChapters(chapters, activeId), key = { it.blockId }) { chapter ->
@@ -234,19 +242,20 @@ private fun ChapterRow(
     val spacing = LocalSpacing.current
     val rowHover = remember { MutableInteractionSource() }
     val hovered by rowHover.collectIsHoveredAsState()
-    val indent = spacing.lg + ((chapter.level - 1) * 12).dp
+    val indent = spacing.sm + ((chapter.level - 1) * 8).dp
     Text(
         text = chapter.title,
-        style = MdBodyMedium,
+        style = MdBodyMedium.copy(fontSize = 14.sp, lineHeight = 18.sp),
         color = if (active) uber.ink else uber.body,
         fontWeight = if (active) FontWeight.SemiBold else FontWeight.Normal,
         maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
         modifier = Modifier
             .fillMaxWidth()
             .hoverable(rowHover)
             .clickable(onClick = onClick)
             .background(if (hovered) uber.canvasSoft else Color.Transparent)
-            .padding(start = indent, end = spacing.lg, top = spacing.sm, bottom = spacing.sm)
+            .padding(start = indent, end = spacing.sm, top = spacing.xs, bottom = spacing.xs)
             .semantics {
                 contentDescription = "Go to ${chapter.title}"
                 selected = active
